@@ -1,2 +1,16 @@
-/data/
-/multi_frame_results/
+# Data & datasets
+data/
+
+# Training outputs / checkpoints
+multi_frame_results/
+*.pth
+*.png
+
+# Environment
+venv/
+__pycache__/
+*.pyc
+
+# OS/editor cruft
+.DS_Store
+*.log

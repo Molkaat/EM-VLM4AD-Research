@@ -64,7 +64,7 @@ def plot_loss(training_loss, val_loss):
 
 def custom_train(train_loss, val_loss, best_model, epochs, learning_rate):
     optimizer = torch.optim.AdamW(model.parameters(), lr=learning_rate)
-    scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, gamma=0.9, last_epoch=-1, verbose=False)
+    scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, gamma=0.9, last_epoch=-1)
 
     for epoch in range(epochs, config.epochs):
         print('-------------------- EPOCH ' + str(epoch) + ' ---------------------')
@@ -250,6 +250,7 @@ if __name__ == '__main__':
         processor = T5Tokenizer.from_pretrained('google-t5/t5-large')
 
     processor.add_tokens('<')
+    model.model.resize_token_embeddings(len(processor))
 
     train_dset = MultiFrameDataset(
         input_file=os.path.join('data', 'multi_frame',
@@ -298,6 +299,7 @@ if __name__ == '__main__':
             model.load_state_dict(torch.load(os.path.join('multi_frame_results', config.checkpoint_file,
                                                           'latest_model.pth')))
             best_model = DriveVLMT5(config)
+            best_model.model.resize_token_embeddings(len(processor))
             best_model.load_state_dict(torch.load(os.path.join('multi_frame_results', config.checkpoint_file,
                                                                'latest_model.pth')))
 
@@ -326,6 +328,7 @@ if __name__ == '__main__':
 
         min_train_loss, min_val_loss = custom_train(min_train_loss, min_val_loss, best_model, epochs_ran, lr)
         best_model = DriveVLMT5(config)
+        best_model.model.resize_token_embeddings(len(processor))
         best_model.load_state_dict(torch.load(os.path.join('multi_frame_results', timestr, 'latest_model.pth')))
         best_model.to(device)
         test_loss = val_model(test_dataloader, best_model)

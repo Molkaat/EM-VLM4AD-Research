@@ -109,6 +109,7 @@ if __name__ == '__main__':
         processor = T5Tokenizer.from_pretrained('google-t5/t5-large')
 
     processor.add_tokens('<')
+    model.model.resize_token_embeddings(len(processor))
 
     model.load_state_dict(
         torch.load(os.path.join('multi_frame_results', config.model_name,
@@ -152,7 +153,35 @@ if __name__ == '__main__':
 
     # evaluate results
     # SPICE will take a few minutes the first time, but speeds up due to caching
-    coco_eval.evaluate()
+    from pycocoevalcap.tokenizer.ptbtokenizer import PTBTokenizer
+    from pycocoevalcap.bleu.bleu import Bleu
+    from pycocoevalcap.meteor.meteor import Meteor
+    from pycocoevalcap.rouge.rouge import Rouge
+    from pycocoevalcap.cider.cider import Cider
+
+    gts = {k: coco.imgToAnns[k] for k in coco_eval.params['image_id']}
+    res = {k: coco_result.imgToAnns[k] for k in coco_eval.params['image_id']}
+
+    tokenizer = PTBTokenizer()
+    gts = tokenizer.tokenize(gts)
+    res = tokenizer.tokenize(res)
+
+    scorers = [
+        (Bleu(4), ["Bleu_1", "Bleu_2", "Bleu_3", "Bleu_4"]),
+        (Meteor(), "METEOR"),
+        (Rouge(), "ROUGE_L"),
+        (Cider(), "CIDEr"),
+    ]
+    for scorer, method in scorers:
+        score, scores = scorer.compute_score(gts, res)
+        if isinstance(method, list):
+            for sc, m in zip(score, method):
+                coco_eval.eval[m] = sc
+        else:
+            coco_eval.eval[method] = score
+
+    for metric, score in coco_eval.eval.items():
+        print(f'{metric}: {score:.3f}')
 
     # Save the experiment results
     save_experiment()
